@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 import json
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -175,10 +176,25 @@ def test_translations_have_the_same_keys():
     assert json.loads((COMPONENT / "translations" / "en.json").read_text()) == strings
 
 
+SCANNED_SUFFIXES = {".json", ".md", ".py", ".yml", ".yaml"}
+# tests/ quotes the phrases on purpose; the rest is not part of the repository.
+SKIPPED_TOP_DIRS = {"tests", ".venv", ".superpowers", ".git", ".pytest_cache"}
+
+
+def _scanned_files() -> list[Path]:
+    files: list[Path] = []
+    for root, dirs, names in os.walk(REPO):
+        if Path(root) == REPO:
+            dirs[:] = [d for d in dirs if d not in SKIPPED_TOP_DIRS]
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        files += [Path(root) / n for n in names if Path(n).suffix in SCANNED_SUFFIXES]
+    return files
+
+
 def test_no_forbidden_wording():
-    files = [*COMPONENT.parent.rglob("*.json"), *COMPONENT.parent.rglob("*.md")]
-    files += [*REPO.glob("*.json"), *REPO.glob("*.md")]
-    assert files
+    files = _scanned_files()
+    suffixes = {p.suffix for p in files}
+    assert {".json", ".md", ".py", ".yml"} <= suffixes
     text = "\n".join(p.read_text().lower() for p in files)
     for phrase in ("fire alarm", "fire detection", "yangın alarmı", "works with home assistant"):
         assert phrase not in text
