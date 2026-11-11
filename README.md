@@ -68,6 +68,8 @@ python -m venv .venv
 
 The tests need a Python version supported by the pinned Home Assistant release (currently Python 3.14).
 
+To test against the oldest supported release, Home Assistant 2025.4, use Python 3.13 and `requirements_test_min.txt` instead. CI runs both.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

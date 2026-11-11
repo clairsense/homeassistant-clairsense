@@ -8,7 +8,7 @@ from unittest.mock import patch
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -17,7 +17,7 @@ from custom_components.clairsense import async_unload_entry
 from custom_components.clairsense.const import API_URL, DOMAIN, SCAN_INTERVAL
 from custom_components.clairsense.sensor import SENSORS, ClairsenseSensor
 
-from .conftest import account_payload, setup_integration
+from .conftest import account_payload, sensor_state, setup_integration
 
 ALL_READINGS = {
     "temperature": 22.4,
@@ -29,14 +29,6 @@ ALL_READINGS = {
     "voc": 1.37,
     "infection_risk": 12,
 }
-
-
-def sensor_state(hass: HomeAssistant, device_id: str, key: str):
-    """State of a sensor by unique ID; entity IDs depend on the Home Assistant version."""
-    entity_id = er.async_get(hass).async_get_entity_id(
-        "sensor", DOMAIN, f"{device_id}_{key}"
-    )
-    return hass.states.get(entity_id) if entity_id else None
 
 
 def _device(device_id: str, name: str, readings: dict, online: bool = True) -> dict:

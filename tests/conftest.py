@@ -6,7 +6,8 @@ import time
 from typing import Any
 
 import pytest
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
@@ -76,3 +77,11 @@ async def setup_integration(
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
+
+
+def sensor_state(hass: HomeAssistant, device_id: str, key: str) -> State | None:
+    """State of a sensor by unique ID; entity IDs depend on the Home Assistant version."""
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{device_id}_{key}"
+    )
+    return hass.states.get(entity_id) if entity_id else None

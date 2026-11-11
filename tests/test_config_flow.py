@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from yarl import URL
 
-from homeassistant.config_entries import SOURCE_USER
+from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
@@ -21,7 +21,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.clairsense.const import API_URL, DOMAIN, REVOKE_URL, TOKEN_URL
 
-from .conftest import account_payload
+from .conftest import account_payload, sensor_state
 
 REPO = Path(__file__).parent.parent
 COMPONENT = REPO / "custom_components" / "clairsense"
@@ -41,8 +41,11 @@ def my_component(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(autouse=True)
-def mock_setup_entry() -> Generator[AsyncMock]:
-    """Setting up the entry is not under test here."""
+def mock_setup_entry(request: pytest.FixtureRequest) -> Generator[AsyncMock | None]:
+    """Setting up the entry is not under test here, except in real_setup tests."""
+    if request.node.get_closest_marker("real_setup"):
+        yield None
+        return
     with patch(
         "custom_components.clairsense.async_setup_entry",
         new=AsyncMock(return_value=True),
@@ -99,6 +102,27 @@ async def test_full_flow(hass, hass_client_no_auth, aioclient_mock):
     assert "client_secret" not in token_request[2]
     assert token_request[2]["code_verifier"]
     assert aioclient_mock.mock_calls[-1][3]["Authorization"] == "Bearer new-access"
+
+
+@pytest.mark.real_setup
+@pytest.mark.usefixtures("current_request_with_host", "my_component")
+async def test_sign_in_sets_up_sensors(hass, hass_client_no_auth, aioclient_mock):
+    """End to end: sign in, the entry sets up for real, sensors show readings."""
+    result = await _start_flow(hass, hass_client_no_auth)
+    aioclient_mock.post(TOKEN_URL, json=TOKEN)
+    aioclient_mock.get(API_URL, json=account_payload())
+    result = await _finish_authorisation(hass, hass_client_no_auth, result)
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    entry = result["result"]
+    assert entry.state is ConfigEntryState.LOADED
+    assert sensor_state(hass, "CS-A", "co2").state == "612"
+    assert sensor_state(hass, "CS-A", "temperature").state == "22.4"
+    assert len(hass.states.async_all("sensor")) == 2
+    api_calls = [c for c in aioclient_mock.mock_calls if str(c[1]) == API_URL]
+    assert len(api_calls) == 2  # the flow's account check, then the first poll
+    assert all(c[3]["Authorization"] == "Bearer new-access" for c in api_calls)
 
 
 @pytest.mark.usefixtures("current_request_with_host", "my_component")

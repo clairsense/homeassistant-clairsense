@@ -6,6 +6,7 @@ on:
 
 jobs:
   pytest:
+    name: pytest (newest Home Assistant)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,4 +14,15 @@ jobs:
         with:
           python-version: "3.14"
       - run: pip install -r requirements_test.txt
+      - run: pytest -q
+
+  pytest-minimum:
+    name: pytest (Home Assistant 2025.4, the stated minimum)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements_test_min.txt
       - run: pytest -q
