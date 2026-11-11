@@ -10,6 +10,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.icon import async_get_icons
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -260,3 +261,8 @@ def test_infection_risk_icon() -> None:
     assert json.loads(icons.read_text()) == {
         "entity": {"sensor": {"infection_risk": {"default": "mdi:virus-outline"}}}
     }
+
+
+async def test_home_assistant_loads_the_icon(hass: HomeAssistant) -> None:
+    icons = await async_get_icons(hass, "entity", [DOMAIN])
+    assert icons[DOMAIN]["sensor"]["infection_risk"]["default"] == "mdi:virus-outline"
