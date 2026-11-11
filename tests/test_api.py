@@ -5,8 +5,12 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from yarl import URL
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMockResponse,
+)
 
 from custom_components.clairsense.api import (
     ClairsenseApiError,
@@ -104,3 +108,36 @@ async def test_non_json_body_raises_api_error(hass, aioclient_mock):
     aioclient_mock.get(API_URL, text="<html>")
     with pytest.raises(ClairsenseApiError):
         await async_get_account(async_get_clientsession(hass), "tok")
+
+
+class _TrackedResponse(AiohttpClientMockResponse):
+    """A mock response that records whether it was handed back to the pool."""
+
+    released = False
+
+    def release(self) -> None:
+        self.released = True
+
+    async def __aexit__(self, *exc_info) -> None:
+        self.released = True
+
+
+@pytest.mark.parametrize(
+    ("status", "error"),
+    [(200, None), (401, ClairsenseAuthError), (503, ClairsenseApiError)],
+)
+async def test_response_is_released(hass, aioclient_mock, status, error):
+    response = _TrackedResponse(
+        "get", URL(API_URL), status=status, json=account_payload()
+    )
+
+    async def _answer(method, url, data):
+        return response
+
+    aioclient_mock.get(API_URL, side_effect=_answer)
+    if error is None:
+        await async_get_account(async_get_clientsession(hass), "tok")
+    else:
+        with pytest.raises(error):
+            await async_get_account(async_get_clientsession(hass), "tok")
+    assert response.released

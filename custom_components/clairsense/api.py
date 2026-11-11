@@ -120,10 +120,12 @@ async def async_get_account(
 ) -> Account:
     """Fetch the account and its devices."""
     try:
-        async with asyncio.timeout(REQUEST_TIMEOUT):
-            response = await session.get(
+        async with (
+            asyncio.timeout(REQUEST_TIMEOUT),
+            session.get(
                 API_URL, headers={"Authorization": f"Bearer {access_token}"}
-            )
+            ) as response,
+        ):
             if response.status == 401:
                 raise ClairsenseAuthError("Access token rejected")
             if response.status != 200:
