@@ -142,7 +142,9 @@ async def async_get_account(
     return _parse_account(body)
 
 
-async def async_revoke_token(session: aiohttp.ClientSession, refresh_token: str) -> None:
+async def async_revoke_token(
+    session: aiohttp.ClientSession, refresh_token: str
+) -> None:
     """Ask the bridge to drop a refresh token; best effort, never raises."""
     try:
         async with (
