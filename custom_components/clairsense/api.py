@@ -5,14 +5,18 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import logging
 import math
 from typing import Any
 
 import aiohttp
 
-from .const import API_URL
+from .const import API_URL, CLIENT_ID, REVOKE_URL
+
+_LOGGER = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 10
+REVOKE_TIMEOUT = 10
 
 KNOWN_READINGS = (
     "temperature",
@@ -136,3 +140,17 @@ async def async_get_account(
     except (aiohttp.ClientError, ValueError) as err:
         raise ClairsenseApiError(f"Request failed: {err}") from err
     return _parse_account(body)
+
+
+async def async_revoke_token(session: aiohttp.ClientSession, refresh_token: str) -> None:
+    """Ask the bridge to drop a refresh token; best effort, never raises."""
+    try:
+        async with (
+            asyncio.timeout(REVOKE_TIMEOUT),
+            session.post(
+                REVOKE_URL, data={"token": refresh_token, "client_id": CLIENT_ID}
+            ),
+        ):
+            pass
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Could not revoke the refresh token", exc_info=True)

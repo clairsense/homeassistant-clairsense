@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 import time
+from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -221,6 +223,23 @@ async def test_remove_entry_survives_revoke_failure(
     aioclient_mock.post(REVOKE_URL, exc=TimeoutError)
     assert await hass.config_entries.async_remove(entry2.entry_id)
     assert hass.config_entries.async_get_entry(entry2.entry_id) is None
+
+
+async def test_remove_entry_does_not_wait_for_a_hanging_revoke(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    entry = await setup_integration(hass, aioclient_mock)
+
+    async def _hang(method, url, data):
+        await asyncio.Event().wait()
+
+    aioclient_mock.post(REVOKE_URL, side_effect=_hang)
+    with patch("custom_components.clairsense.api.REVOKE_TIMEOUT", 0.01):
+        async with asyncio.timeout(2):
+            assert await hass.config_entries.async_remove(entry.entry_id)
+    assert hass.config_entries.async_get_entry(entry.entry_id) is None
+    calls = [c for c in aioclient_mock.mock_calls if str(c[1]) == REVOKE_URL]
+    assert len(calls) == 1
 
 
 def dt_now_plus(delta):

@@ -19,7 +19,7 @@ from homeassistant.setup import async_setup_component
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.clairsense.const import API_URL, DOMAIN, TOKEN_URL
+from custom_components.clairsense.const import API_URL, DOMAIN, REVOKE_URL, TOKEN_URL
 
 from .conftest import account_payload
 
@@ -41,13 +41,13 @@ def my_component(hass: HomeAssistant) -> None:
 
 
 @pytest.fixture(autouse=True)
-def mock_setup_entry() -> Generator[None]:
+def mock_setup_entry() -> Generator[AsyncMock]:
     """Setting up the entry is not under test here."""
     with patch(
         "custom_components.clairsense.async_setup_entry",
         new=AsyncMock(return_value=True),
-    ):
-        yield
+    ) as mock:
+        yield mock
 
 
 async def _start_flow(hass: HomeAssistant, hass_client_no_auth, source=SOURCE_USER):
@@ -68,6 +68,13 @@ async def _finish_authorisation(
 
 def _token_calls(aioclient_mock):
     return [c for c in aioclient_mock.mock_calls if str(c[1]) == TOKEN_URL]
+
+
+def _revoke_calls(aioclient_mock):
+    return [c[2] for c in aioclient_mock.mock_calls if str(c[1]) == REVOKE_URL]
+
+
+NEW_TOKEN_REVOKED = [{"token": "new-refresh", "client_id": "home-assistant"}]
 
 
 @pytest.mark.usefixtures("current_request_with_host", "my_component")
@@ -95,14 +102,32 @@ async def test_full_flow(hass, hass_client_no_auth, aioclient_mock):
 
 
 @pytest.mark.usefixtures("current_request_with_host", "my_component")
-async def test_same_account_twice_aborts(hass, hass_client_no_auth, aioclient_mock):
-    MockConfigEntry(domain=DOMAIN, unique_id="3f9a1c0b7d2e4a55").add_to_hass(hass)
+async def test_same_account_twice_gives_the_entry_the_new_token(
+    hass, hass_client_no_auth, aioclient_mock, mock_setup_entry
+):
+    """The bridge keeps one grant, so the new sign-in replaced the entry's token."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="3f9a1c0b7d2e4a55",
+        data={"auth_implementation": DOMAIN, "token": {"refresh_token": "old"}},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    assert mock_setup_entry.call_count == 1
+
     result = await _start_flow(hass, hass_client_no_auth)
     aioclient_mock.post(TOKEN_URL, json=TOKEN)
+    aioclient_mock.post(REVOKE_URL)
     aioclient_mock.get(API_URL, json=account_payload())
     result = await _finish_authorisation(hass, hass_client_no_auth, result)
+    await hass.async_block_till_done()
+
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+    assert entry.data["token"]["refresh_token"] == "new-refresh"
+    assert entry.data["auth_implementation"] == DOMAIN
+    assert mock_setup_entry.call_count == 2  # reloaded with the new token
+    assert _revoke_calls(aioclient_mock) == []
 
 
 @pytest.mark.usefixtures("current_request_with_host", "my_component")
@@ -112,10 +137,12 @@ async def test_api_failure_after_token_aborts(
 ):
     result = await _start_flow(hass, hass_client_no_auth)
     aioclient_mock.post(TOKEN_URL, json=TOKEN)
+    aioclient_mock.post(REVOKE_URL)
     aioclient_mock.get(API_URL, status=status)
     result = await _finish_authorisation(hass, hass_client_no_auth, result)
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
+    assert _revoke_calls(aioclient_mock) == NEW_TOKEN_REVOKED
 
 
 @pytest.mark.usefixtures("current_request_with_host")
@@ -139,6 +166,7 @@ async def _reauth(hass, hass_client_no_auth, aioclient_mock, account_id):
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.EXTERNAL_STEP
     aioclient_mock.post(TOKEN_URL, json=TOKEN)
+    aioclient_mock.post(REVOKE_URL)
     aioclient_mock.get(API_URL, json=account_payload(account_id=account_id))
     return entry, await _finish_authorisation(hass, hass_client_no_auth, result)
 
@@ -160,6 +188,31 @@ async def test_reauth_wrong_account_aborts(hass, hass_client_no_auth, aioclient_
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "wrong_account"
     assert entry.data["token"] == {"access_token": "old"}
+    assert _revoke_calls(aioclient_mock) == NEW_TOKEN_REVOKED
+
+
+@pytest.mark.usefixtures("current_request_with_host", "my_component")
+async def test_reauth_as_another_set_up_account_gives_it_the_token(
+    hass, hass_client_no_auth, aioclient_mock, mock_setup_entry
+):
+    other = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="other",
+        data={"auth_implementation": DOMAIN, "token": {"refresh_token": "other-old"}},
+    )
+    other.add_to_hass(hass)
+    entry, result = await _reauth(hass, hass_client_no_auth, aioclient_mock, "other")
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+    assert entry.data["token"] == {"access_token": "old"}
+    assert other.data["token"]["refresh_token"] == "new-refresh"
+    assert other.data["auth_implementation"] == DOMAIN
+    set_up = [call.args[1].entry_id for call in mock_setup_entry.call_args_list]
+    assert set_up.count(other.entry_id) == 2  # set up, then reloaded with the token
+    assert set_up.count(entry.entry_id) == 1
+    assert _revoke_calls(aioclient_mock) == []
 
 
 def _keys(node: Any, prefix: str = "") -> set[str]:
