@@ -215,6 +215,23 @@ async def test_reauth_as_another_set_up_account_gives_it_the_token(
     assert _revoke_calls(aioclient_mock) == []
 
 
+@pytest.mark.usefixtures("current_request_with_host")
+async def test_reauth_without_my_integration_aborts(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="3f9a1c0b7d2e4a55",
+        data={"auth_implementation": DOMAIN, "token": {"access_token": "old"}},
+    )
+    entry.add_to_hass(hass)
+    assert await async_setup_component(hass, DOMAIN, {})
+    result = await entry.start_reauth_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "my_integration_required"
+
+
 def _keys(node: Any, prefix: str = "") -> set[str]:
     if isinstance(node, dict):
         return {k for key, v in node.items() for k in _keys(v, f"{prefix}{key}.")}

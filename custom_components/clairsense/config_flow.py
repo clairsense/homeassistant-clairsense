@@ -36,9 +36,13 @@ class OAuth2FlowHandler(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Start the flow; the redirect goes through my.home-assistant.io."""
-        if "my" not in self.hass.config.components:
+        if not self._my_integration_loaded():
             return self.async_abort(reason="my_integration_required")
         return await super().async_step_user(user_input)
+
+    def _my_integration_loaded(self) -> bool:
+        """Signing in returns to Home Assistant through the My redirect."""
+        return "my" in self.hass.config.components
 
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Identify the account with the new token, then create or update the entry.
@@ -95,9 +99,15 @@ class OAuth2FlowHandler(
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask the user to sign in again."""
+        """Ask the user to sign in again.
+
+        The form is shown even without the My integration, so the request stays
+        visible; the check happens when the user goes on to sign in.
+        """
         if user_input is None:
             return self.async_show_form(step_id="reauth_confirm")
+        if not self._my_integration_loaded():
+            return self.async_abort(reason="my_integration_required")
         return await self.async_step_pick_implementation(
             user_input={
                 "implementation": self._get_reauth_entry().data["auth_implementation"]
