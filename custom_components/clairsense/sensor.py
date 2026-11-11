@@ -101,15 +101,17 @@ async def async_setup_entry(
 
     @callback
     def _add_new_pairs() -> None:
+        devices = coordinator.data.devices
+        # Forget devices that left the account (their sensors are removed with
+        # them), so a device that comes back gets its sensors again.
+        known.difference_update({pair for pair in known if pair[0] not in devices})
         new: list[ClairsenseSensor] = []
-        for device in coordinator.data.devices.values():
+        for device in devices.values():
             for key in device.readings:
                 if key in descriptions and (device.id, key) not in known:
                     known.add((device.id, key))
                     new.append(
-                        ClairsenseSensor(
-                            coordinator, device.id, descriptions[key], known
-                        )
+                        ClairsenseSensor(coordinator, device.id, descriptions[key])
                     )
         if new:
             async_add_entities(new)
@@ -128,12 +130,10 @@ class ClairsenseSensor(CoordinatorEntity[ClairsenseCoordinator], SensorEntity):
         coordinator: ClairsenseCoordinator,
         device_id: str,
         description: SensorEntityDescription,
-        known: set[tuple[str, str]],
     ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._device_id = device_id
-        self._known = known
         self._attr_unique_id = f"{device_id}_{description.key}"
 
     @property
@@ -160,7 +160,3 @@ class ClairsenseSensor(CoordinatorEntity[ClairsenseCoordinator], SensorEntity):
             and device.online
             and self.entity_description.key in device.readings
         )
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Forget the pair so a device that returns gets its sensors again."""
-        self._known.discard((self._device_id, self.entity_description.key))

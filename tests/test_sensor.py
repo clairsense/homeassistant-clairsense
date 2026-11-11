@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
+from custom_components.clairsense import async_unload_entry
 from custom_components.clairsense.const import API_URL, DOMAIN, SCAN_INTERVAL
 from custom_components.clairsense.sensor import SENSORS, ClairsenseSensor
 
@@ -190,6 +193,13 @@ async def test_device_gone_removes_sensors_and_returns_with_them(
     assert entity_registry.async_get_entity_id("sensor", DOMAIN, "CS-B_co2") is None
     assert sensor_state(hass, "CS-A", "co2").state == "612"
 
+    # A second poll without it: the device stays gone.
+    await _poll(
+        hass, aioclient_mock, account_payload(devices=[_device("CS-A", "Living room", {"co2": 612})])
+    )
+    assert entity_registry.async_get_entity_id("sensor", DOMAIN, "CS-B_co2") is None
+    assert len(hass.states.async_all("sensor")) == 1
+
     await _poll(hass, aioclient_mock, both)
     assert sensor_state(hass, "CS-B", "co2").state == "500"
 
@@ -224,5 +234,29 @@ async def test_sensor_device_info_only_links_to_the_device(
 ) -> None:
     """Adding a sensor must not re-apply the room, name or firmware."""
     entry = await setup_integration(hass, aioclient_mock)
-    sensor = ClairsenseSensor(entry.runtime_data, "CS-A", SENSORS[0], set())
+    sensor = ClairsenseSensor(entry.runtime_data, "CS-A", SENSORS[0])
     assert sensor.device_info == {"identifiers": {(DOMAIN, "CS-A")}}
+
+
+async def test_listener_after_platform_unload_adds_nothing(
+    hass: HomeAssistant, aioclient_mock
+) -> None:
+    """A poll landing between the platform unload and the end of the entry unload."""
+    entry = await setup_integration(hass, aioclient_mock)
+    coordinator = entry.runtime_data
+
+    async def _unload_then_poll(hass: HomeAssistant, entry) -> bool:
+        unloaded = await async_unload_entry(hass, entry)
+        coordinator.async_update_listeners()
+        return unloaded
+
+    with (
+        patch("custom_components.clairsense.async_unload_entry", _unload_then_poll),
+        patch("custom_components.clairsense.sensor.ClairsenseSensor") as sensor_class,
+    ):
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator.async_update_listeners()
+        await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.NOT_LOADED
+    sensor_class.assert_not_called()
