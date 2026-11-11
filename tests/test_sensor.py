@@ -266,3 +266,14 @@ def test_infection_risk_icon() -> None:
 async def test_home_assistant_loads_the_icon(hass: HomeAssistant) -> None:
     icons = await async_get_icons(hass, "entity", [DOMAIN])
     assert icons[DOMAIN]["sensor"]["infection_risk"]["default"] == "mdi:virus-outline"
+
+
+def _png_size(path: Path) -> tuple[int, int]:
+    header = path.read_bytes()[:24]
+    assert header[:8] == b"\x89PNG\r\n\x1a\n"
+    return int.from_bytes(header[16:20], "big"), int.from_bytes(header[20:24], "big")
+
+
+def test_dark_logo_matches_the_logo() -> None:
+    brand = Path(__file__).parent.parent / "custom_components" / "clairsense" / "brand"
+    assert _png_size(brand / "dark_logo.png") == _png_size(brand / "logo.png")
