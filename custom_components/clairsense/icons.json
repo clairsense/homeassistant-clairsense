@@ -1,0 +1,9 @@
+{
+  "entity": {
+    "sensor": {
+      "infection_risk": {
+        "default": "mdi:virus-outline"
+      }
+    }
+  }
+}

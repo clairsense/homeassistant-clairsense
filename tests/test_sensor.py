@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -252,3 +253,10 @@ async def test_listener_after_platform_unload_adds_nothing(
         await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
     sensor_class.assert_not_called()
+
+
+def test_infection_risk_icon() -> None:
+    icons = Path(__file__).parent.parent / "custom_components" / "clairsense" / "icons.json"
+    assert json.loads(icons.read_text()) == {
+        "entity": {"sensor": {"infection_risk": {"default": "mdi:virus-outline"}}}
+    }
