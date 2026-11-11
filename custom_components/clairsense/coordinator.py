@@ -32,7 +32,7 @@ _REAUTH_STATUSES = (400, 401)
 
 
 def device_info_for(device: Device) -> DeviceInfo:
-    """Describe a monitor; shared by the device registry sync and the entities."""
+    """Describe a monitor the first time it is registered."""
     return DeviceInfo(
         identifiers={(DOMAIN, device.id)},
         name=device.name,
@@ -86,16 +86,31 @@ class ClairsenseCoordinator(DataUpdateCoordinator[Account]):
         return account
 
     def _sync_devices(self, account: Account) -> None:
-        """Register the account's devices and drop the ones that are gone."""
+        """Register new devices, refresh known ones and drop the ones that are gone.
+
+        The room is only suggested when a device is first registered: passing it
+        again would, on older Home Assistant versions, put back an area the user
+        cleared.
+        """
         registry = dr.async_get(self.hass)
         entry_id = self.config_entry.entry_id
-        for device in account.devices.values():
-            registry.async_get_or_create(
-                config_entry_id=entry_id, **device_info_for(device)
-            )
-        for stale in dr.async_entries_for_config_entry(registry, entry_id):
-            ids = {i[1] for i in stale.identifiers if i[0] == DOMAIN}
+        registered: dict[str, dr.DeviceEntry] = {}
+        for device_entry in dr.async_entries_for_config_entry(registry, entry_id):
+            ids = {i[1] for i in device_entry.identifiers if i[0] == DOMAIN}
             if ids and not ids & account.devices.keys():
                 registry.async_update_device(
-                    stale.id, remove_config_entry_id=entry_id
+                    device_entry.id, remove_config_entry_id=entry_id
+                )
+            else:
+                registered.update(dict.fromkeys(ids, device_entry))
+
+        for device in account.devices.values():
+            existing = registered.get(device.id)
+            if existing is None:
+                registry.async_get_or_create(
+                    config_entry_id=entry_id, **device_info_for(device)
+                )
+            elif (existing.name, existing.sw_version) != (device.name, device.firmware):
+                registry.async_update_device(
+                    existing.id, name=device.name, sw_version=device.firmware
                 )

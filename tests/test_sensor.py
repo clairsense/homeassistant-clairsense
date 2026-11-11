@@ -12,7 +12,7 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
 from custom_components.clairsense.const import API_URL, DOMAIN, SCAN_INTERVAL
-from custom_components.clairsense.sensor import SENSORS
+from custom_components.clairsense.sensor import SENSORS, ClairsenseSensor
 
 from .conftest import account_payload, setup_integration
 
@@ -217,3 +217,12 @@ async def test_turkish_names(hass: HomeAssistant, aioclient_mock) -> None:
     ]
     assert any(name.endswith("Karbondioksit") for name in friendly)
     assert any(name.endswith("Sıcaklık") for name in friendly)
+
+
+async def test_sensor_device_info_only_links_to_the_device(
+    hass: HomeAssistant, aioclient_mock
+) -> None:
+    """Adding a sensor must not re-apply the room, name or firmware."""
+    entry = await setup_integration(hass, aioclient_mock)
+    sensor = ClairsenseSensor(entry.runtime_data, "CS-A", SENSORS[0], set())
+    assert sensor.device_info == {"identifiers": {(DOMAIN, "CS-A")}}

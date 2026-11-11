@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import area_registry as ar, device_registry as dr
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
@@ -196,6 +196,76 @@ async def test_new_device_is_registered_on_later_poll(
     assert device.name == "Hall"
     assert device.manufacturer == MANUFACTURER
     assert device.sw_version == "1.0.3"
+
+
+def _device_entry(
+    device_registry: dr.DeviceRegistry, entry, device_id: str = "CS-A"
+) -> dr.DeviceEntry:
+    return next(
+        device
+        for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+        if (DOMAIN, device_id) in device.identifiers
+    )
+
+
+async def _refresh(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, entry, payload) -> None:
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(API_URL, json=payload)
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+
+async def test_cleared_area_stays_cleared(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    entry = await setup_integration(hass, aioclient_mock)
+    device = _device_entry(device_registry, entry)
+    assert device.area_id == "salon"
+
+    device_registry.async_update_device(device.id, area_id=None)
+    await _refresh(hass, aioclient_mock, entry, account_payload())
+    assert _device_entry(device_registry, entry).area_id is None
+
+    # Setting the sensors up again does not bring the area back either.
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert _device_entry(device_registry, entry).area_id is None
+
+
+async def test_deleted_area_is_not_recreated(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+    area_registry: ar.AreaRegistry,
+) -> None:
+    entry = await setup_integration(hass, aioclient_mock)
+    area_registry.async_delete(_device_entry(device_registry, entry).area_id)
+    assert _device_entry(device_registry, entry).area_id is None
+
+    await _refresh(hass, aioclient_mock, entry, account_payload())
+    assert _device_entry(device_registry, entry).area_id is None
+    assert area_registry.async_get_area_by_name("Salon") is None
+
+
+async def test_rename_and_new_firmware_update_the_registry(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    entry = await setup_integration(hass, aioclient_mock)
+    device_registry.async_update_device(
+        _device_entry(device_registry, entry).id, name_by_user="My monitor"
+    )
+    payload = account_payload()
+    payload["devices"][0].update(name="Kitchen", firmware="1.0.4")
+    await _refresh(hass, aioclient_mock, entry, payload)
+
+    device = _device_entry(device_registry, entry)
+    assert (device.name, device.sw_version) == ("Kitchen", "1.0.4")
+    assert device.name_by_user == "My monitor"
+    assert device.manufacturer == MANUFACTURER
 
 
 async def test_remove_entry_revokes(

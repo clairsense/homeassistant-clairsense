@@ -20,7 +20,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import ClairsenseConfigEntry, ClairsenseCoordinator, device_info_for
+from .const import DOMAIN
+from .coordinator import ClairsenseConfigEntry, ClairsenseCoordinator
 
 PARALLEL_UPDATES = 0
 
@@ -136,11 +137,9 @@ class ClairsenseSensor(CoordinatorEntity[ClairsenseCoordinator], SensorEntity):
         self._attr_unique_id = f"{device_id}_{description.key}"
 
     @property
-    def device_info(self) -> DeviceInfo | None:
-        """Describe the monitor, from the same source the registry sync uses."""
-        device = self.coordinator.data.devices.get(self._device_id)
-        # The device has just left the account: the registry is about to drop it.
-        return device_info_for(device) if device else None
+    def device_info(self) -> DeviceInfo:
+        """Link to the monitor; the coordinator keeps its name, firmware and room."""
+        return DeviceInfo(identifiers={(DOMAIN, self._device_id)})
 
     @property
     def native_value(self) -> float | None:
