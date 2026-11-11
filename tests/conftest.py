@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import pytest
+from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
+
+from custom_components.clairsense.const import API_URL, DOMAIN
 
 
 @pytest.fixture(autouse=True)
@@ -37,3 +43,36 @@ def account_payload(
             }
         ]
     return {"account_id": account_id, "devices": devices}
+
+
+def token_data(*, expires_in: float = 3600, access: str = "access-1", refresh: str = "refresh-1") -> dict[str, Any]:
+    """Return a stored OAuth token; a negative expires_in makes it expired."""
+    return {
+        "access_token": access,
+        "refresh_token": refresh,
+        "token_type": "Bearer",
+        "expires_in": expires_in,
+        "expires_at": time.time() + expires_in,
+    }
+
+
+async def setup_integration(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    payload: dict[str, Any] | None = None,
+    token: dict[str, Any] | None = None,
+) -> MockConfigEntry:
+    """Add a config entry with a valid token, mock the API and set it up."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="3f9a1c0b7d2e4a55",
+        data={
+            "auth_implementation": DOMAIN,
+            "token": token if token is not None else token_data(),
+        },
+    )
+    entry.add_to_hass(hass)
+    aioclient_mock.get(API_URL, json=payload if payload is not None else account_payload())
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry

@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
+import logging
+
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
-from .const import AUTHORIZE_URL, CLIENT_ID, DOMAIN, TOKEN_URL
+from .const import AUTHORIZE_URL, CLIENT_ID, DOMAIN, REVOKE_URL, TOKEN_URL
+from .coordinator import ClairsenseConfigEntry, ClairsenseCoordinator
+
+__all__ = ["ClairsenseConfigEntry", "async_setup_entry", "async_unload_entry"]
+
+_LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+# Task 4 sets this to [Platform.SENSOR].
+PLATFORMS: list[Platform] = []
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -22,3 +34,35 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         ),
     )
     return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ClairsenseConfigEntry) -> bool:
+    """Set up Clairsense from a config entry."""
+    implementation = (
+        await config_entry_oauth2_flow.async_get_config_entry_implementation(
+            hass, entry
+        )
+    )
+    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
+    coordinator = ClairsenseCoordinator(hass, entry, session)
+    await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ClairsenseConfigEntry) -> bool:
+    """Unload a config entry."""
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ClairsenseConfigEntry) -> None:
+    """Revoke the refresh token when the entry is removed; never block removal."""
+    try:
+        refresh_token = entry.data["token"]["refresh_token"]
+        response = await async_get_clientsession(hass).post(
+            REVOKE_URL, data={"token": refresh_token, "client_id": CLIENT_ID}
+        )
+        response.release()
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Could not revoke the refresh token", exc_info=True)

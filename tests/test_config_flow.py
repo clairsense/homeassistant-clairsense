@@ -45,7 +45,6 @@ def mock_setup_entry() -> Generator[None]:
     with patch(
         "custom_components.clairsense.async_setup_entry",
         new=AsyncMock(return_value=True),
-        create=True,
     ):
         yield
 
