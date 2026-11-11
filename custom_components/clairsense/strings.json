@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "pick_implementation": {
+        "title": "Pick authentication method"
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "Your Clairsense sign-in has expired or was revoked. Sign in again to keep your monitors available in Home Assistant."
+      }
+    },
+    "abort": {
+      "my_integration_required": "Signing in to Clairsense needs the My Home Assistant redirect service. Enable the My integration (it is part of the default configuration) and try again.",
+      "cannot_connect": "Signed in, but the Clairsense account could not be read. Try again in a few minutes.",
+      "already_configured": "This Clairsense account is already set up.",
+      "wrong_account": "You signed in with a different Clairsense account than the one this entry uses. Sign in with the original account.",
+      "reauth_successful": "Re-authentication was successful.",
+      "authorize_url_timeout": "Timed out generating the authorization URL.",
+      "missing_configuration": "The Clairsense integration is not configured.",
+      "missing_credentials": "No application credentials are available for Clairsense.",
+      "no_url_available": "No URL is available to complete the sign-in. For information about this error, see the documentation.",
+      "oauth_error": "Received invalid token data.",
+      "oauth_failed": "Error while obtaining the access token.",
+      "oauth_implementation_unavailable": "The sign-in method is unavailable.",
+      "oauth_timeout": "Timed out while obtaining the access token.",
+      "oauth_unauthorized": "Sign-in was not authorized.",
+      "user_rejected_authorize": "Sign-in was declined: {error}"
+    },
+    "create_entry": {
+      "default": "Successfully signed in to Clairsense."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperature"
+      },
+      "humidity": {
+        "name": "Humidity"
+      },
+      "co2": {
+        "name": "Carbon dioxide"
+      },
+      "pm25": {
+        "name": "PM2.5"
+      },
+      "pressure": {
+        "name": "Pressure"
+      },
+      "iaq": {
+        "name": "Air quality index"
+      },
+      "voc": {
+        "name": "Volatile organic compounds"
+      },
+      "infection_risk": {
+        "name": "Infection risk"
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
   "name": "Clairsense",
   "codeowners": ["@tensarflow"],
   "config_flow": true,
-  "dependencies": ["http"],
+  "dependencies": ["auth", "http"],
   "documentation": "https://github.com/clairsense/homeassistant-clairsense",
   "integration_type": "hub",
   "iot_class": "cloud_polling",

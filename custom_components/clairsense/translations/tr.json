@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "pick_implementation": {
+        "title": "Kimlik doğrulama yöntemini seçin"
+      },
+      "reauth_confirm": {
+        "title": "Yeniden oturum açın",
+        "description": "Clairsense oturumunuzun süresi doldu veya iptal edildi. Monitörlerinizi Home Assistant'ta kullanılabilir tutmak için yeniden oturum açın."
+      }
+    },
+    "abort": {
+      "my_integration_required": "Clairsense'e giriş için My Home Assistant yönlendirme hizmeti gerekir. My entegrasyonunu etkinleştirip (varsayılan yapılandırmada gelir) yeniden deneyin.",
+      "cannot_connect": "Oturum açıldı ancak Clairsense hesabı okunamadı. Birkaç dakika sonra yeniden deneyin.",
+      "already_configured": "Bu Clairsense hesabı zaten kurulu.",
+      "wrong_account": "Bu girişin kullandığından farklı bir Clairsense hesabıyla oturum açtınız. İlk hesapla oturum açın.",
+      "reauth_successful": "Yeniden kimlik doğrulama başarılı.",
+      "authorize_url_timeout": "Yetkilendirme adresi oluşturulurken zaman aşımı oldu.",
+      "missing_configuration": "Clairsense entegrasyonu yapılandırılmamış.",
+      "missing_credentials": "Clairsense için uygulama kimlik bilgileri yok.",
+      "no_url_available": "Oturum açmayı tamamlamak için kullanılabilir bir adres yok. Bu hata hakkında bilgi için belgelere bakın.",
+      "oauth_error": "Geçersiz belirteç verisi alındı.",
+      "oauth_failed": "Erişim belirteci alınırken hata oluştu.",
+      "oauth_implementation_unavailable": "Oturum açma yöntemi kullanılamıyor.",
+      "oauth_timeout": "Erişim belirteci alınırken zaman aşımı oldu.",
+      "oauth_unauthorized": "Oturum açma yetkilendirilmedi.",
+      "user_rejected_authorize": "Oturum açma reddedildi: {error}"
+    },
+    "create_entry": {
+      "default": "Clairsense'e başarıyla giriş yapıldı."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Sıcaklık"
+      },
+      "humidity": {
+        "name": "Nem"
+      },
+      "co2": {
+        "name": "Karbondioksit"
+      },
+      "pm25": {
+        "name": "PM2.5"
+      },
+      "pressure": {
+        "name": "Basınç"
+      },
+      "iaq": {
+        "name": "Hava kalitesi endeksi"
+      },
+      "voc": {
+        "name": "Uçucu organik bileşikler"
+      },
+      "infection_risk": {
+        "name": "Enfeksiyon riski"
+      }
+    }
+  }
+}
