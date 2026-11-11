@@ -186,7 +186,11 @@ async def test_new_device_is_registered_on_later_poll(
     async_fire_time_changed(hass, dt_now_plus(SCAN_INTERVAL + timedelta(seconds=5)))
     await hass.async_block_till_done()
     assert _registered(device_registry, entry) == {"CS-A", "CS-C"}
-    device = device_registry.async_get_device(identifiers={(DOMAIN, "CS-C")})
+    device = next(
+        d
+        for d in dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+        if (DOMAIN, "CS-C") in d.identifiers
+    )
     assert device.name == "Hall"
     assert device.manufacturer == MANUFACTURER
     assert device.sw_version == "1.0.3"
