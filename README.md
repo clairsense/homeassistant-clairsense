@@ -52,7 +52,10 @@ A sensor appears the first time a device reports that reading.
 
 ## Troubleshooting
 
-Start one sign-in at a time. A second sign-in started in the same Home Assistant before the first one finishes makes the first one fail.
+Home Assistant asks you to sign in to Clairsense again when:
+
+- another Home Assistant install signs in to the same Clairsense account. The newest sign-in replaces the older one, so the first install asks you to sign in again.
+- you restore a Home Assistant backup. The sign-in saved in the backup is no longer valid, so sign in again when asked.
 
 ## Removal
 
