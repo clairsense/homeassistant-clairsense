@@ -10,8 +10,9 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .api import async_revoke_token
-from .const import AUTHORIZE_URL, CLIENT_ID, DOMAIN, TOKEN_URL
+from .const import DOMAIN
 from .coordinator import ClairsenseConfigEntry, ClairsenseCoordinator
+from .oauth import async_ensure_implementation
 
 __all__ = ["ClairsenseConfigEntry", "async_setup_entry", "async_unload_entry"]
 
@@ -22,13 +23,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the OAuth2 implementation: authorisation code with PKCE, no secret."""
-    config_entry_oauth2_flow.async_register_implementation(
-        hass,
-        DOMAIN,
-        config_entry_oauth2_flow.LocalOAuth2ImplementationWithPkce(
-            hass, DOMAIN, CLIENT_ID, AUTHORIZE_URL, TOKEN_URL
-        ),
-    )
+    async_ensure_implementation(hass)
     return True
 
 

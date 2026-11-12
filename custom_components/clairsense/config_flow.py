@@ -17,6 +17,7 @@ from .api import (
     async_revoke_token,
 )
 from .const import DOMAIN
+from .oauth import async_ensure_implementation
 
 
 class OAuth2FlowHandler(
@@ -39,6 +40,16 @@ class OAuth2FlowHandler(
         if not self._my_integration_loaded():
             return self.async_abort(reason="my_integration_required")
         return await super().async_step_user(user_input)
+
+    async def async_step_pick_implementation(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Make sure the sign-in method exists before the flow looks for it.
+
+        A first sign-in reaches this step before async_setup has ever run.
+        """
+        async_ensure_implementation(self.hass)
+        return await super().async_step_pick_implementation(user_input)
 
     def _my_integration_loaded(self) -> bool:
         """Signing in returns to Home Assistant through the My redirect."""

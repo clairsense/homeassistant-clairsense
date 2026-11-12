@@ -125,6 +125,33 @@ async def test_sign_in_sets_up_sensors(hass, hass_client_no_auth, aioclient_mock
     assert all(c[3]["Authorization"] == "Bearer new-access" for c in api_calls)
 
 
+@pytest.mark.real_setup
+@pytest.mark.usefixtures("current_request_with_host", "my_component")
+async def test_first_sign_in_on_a_fresh_install(hass, hass_client_no_auth, aioclient_mock):
+    """A first sign-in works before the integration has ever been set up.
+
+    For a first flow Home Assistant loads only the config flow module; it does
+    not run async_setup. The flow must therefore bring its own sign-in method.
+    """
+    assert DOMAIN not in hass.config.components
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    assert result["type"] is FlowResultType.EXTERNAL_STEP
+    assert URL(result["url"]).query["client_id"] == "home-assistant"
+
+    aioclient_mock.post(TOKEN_URL, json=TOKEN)
+    aioclient_mock.get(API_URL, json=account_payload())
+    result = await _finish_authorisation(hass, hass_client_no_auth, result)
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].state is ConfigEntryState.LOADED
+    (token_request,) = _token_calls(aioclient_mock)
+    assert token_request[2]["code_verifier"]
+    assert sensor_state(hass, "CS-A", "co2").state == "612"
+
+
 @pytest.mark.usefixtures("current_request_with_host", "my_component")
 async def test_same_account_twice_gives_the_entry_the_new_token(
     hass, hass_client_no_auth, aioclient_mock, mock_setup_entry
