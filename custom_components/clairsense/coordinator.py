@@ -111,14 +111,16 @@ class ClairsenseCoordinator(DataUpdateCoordinator[Account]):
                 registry.async_get_or_create(
                     config_entry_id=entry_id, **device_info_for(device)
                 )
-            elif (existing.name, existing.sw_version, existing.model) != (
-                device.name,
-                device.firmware,
-                device.model,
-            ):
+            elif (
+                existing.name,
+                existing.sw_version,
+                existing.model,
+                existing.manufacturer,
+            ) != (device.name, device.firmware, device.model, MANUFACTURER):
                 registry.async_update_device(
                     existing.id,
                     name=device.name,
                     sw_version=device.firmware,
                     model=device.model,
+                    manufacturer=MANUFACTURER,
                 )

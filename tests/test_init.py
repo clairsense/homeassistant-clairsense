@@ -304,6 +304,39 @@ async def test_model_reaches_a_device_registered_without_one(
     assert _device_entry(device_registry, entry).model == "CLS-V2M1"
 
 
+async def test_maker_is_the_brand(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """Home Assistant heads a device with maker and model: "Clairsense CLS-V1M1"."""
+    payload = account_payload()
+    payload["devices"][0]["model"] = "CLS-V1M1"
+    entry = await setup_integration(hass, aioclient_mock, payload)
+    device = _device_entry(device_registry, entry)
+    assert (device.manufacturer, device.model) == ("Clairsense", "CLS-V1M1")
+
+
+async def test_maker_reaches_a_device_registered_under_the_old_one(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """Devices linked while the maker was "ARTEQ" follow on the next poll."""
+    entry = await setup_integration(hass, aioclient_mock)
+    linked = _device_entry(device_registry, entry)
+    device_registry.async_update_device(
+        linked.id, manufacturer="ARTEQ", name_by_user="My monitor", area_id=None
+    )
+    assert _device_entry(device_registry, entry).manufacturer == "ARTEQ"
+
+    await _refresh(hass, aioclient_mock, entry, account_payload())
+    device = _device_entry(device_registry, entry)
+    assert device.manufacturer == "Clairsense"
+    assert (device.name, device.sw_version) == ("Living room", "1.0.3")
+    assert (device.name_by_user, device.area_id) == ("My monitor", None)
+
+
 async def test_unchanged_device_is_not_rewritten(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,

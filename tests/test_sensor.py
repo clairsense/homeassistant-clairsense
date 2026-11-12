@@ -83,7 +83,7 @@ async def test_sensors_created_with_classes_and_units(
     device = devices[0]
     assert (DOMAIN, "CS-A") in device.identifiers
     assert (device.manufacturer, device.sw_version, device.suggested_area) == (
-        "ARTEQ",
+        "Clairsense",
         "1.0.3",
         "Salon",
     )

@@ -3,7 +3,9 @@
 from datetime import timedelta
 
 DOMAIN = "clairsense"
-MANUFACTURER = "ARTEQ"
+# The brand people know the device by. Home Assistant heads a device with maker and
+# model, so this reads "Clairsense CLS-V1M1". The legal manufacturer is ARTEQ.
+MANUFACTURER = "Clairsense"
 
 CLIENT_ID = "home-assistant"
 AUTHORIZE_URL = "https://smarthome.clairsense.net/oauth/authorize"
