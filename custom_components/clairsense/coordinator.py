@@ -37,6 +37,7 @@ def device_info_for(device: Device) -> DeviceInfo:
         identifiers={(DOMAIN, device.id)},
         name=device.name,
         manufacturer=MANUFACTURER,
+        model=device.model,
         sw_version=device.firmware,
         suggested_area=device.room,
     )
@@ -110,7 +111,14 @@ class ClairsenseCoordinator(DataUpdateCoordinator[Account]):
                 registry.async_get_or_create(
                     config_entry_id=entry_id, **device_info_for(device)
                 )
-            elif (existing.name, existing.sw_version) != (device.name, device.firmware):
+            elif (existing.name, existing.sw_version, existing.model) != (
+                device.name,
+                device.firmware,
+                device.model,
+            ):
                 registry.async_update_device(
-                    existing.id, name=device.name, sw_version=device.firmware
+                    existing.id,
+                    name=device.name,
+                    sw_version=device.firmware,
+                    model=device.model,
                 )

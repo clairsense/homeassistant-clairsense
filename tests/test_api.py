@@ -36,6 +36,27 @@ async def test_parses_account(hass, aioclient_mock):
     assert aioclient_mock.mock_calls[0][3]["Authorization"] == "Bearer tok"
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("CLS-V1M1", "CLS-V1M1"), (None, None), ("", None), (7, None), (["CLS-V1M1"], None)],
+)
+async def test_model(hass, aioclient_mock, raw, expected):
+    payload = account_payload()
+    payload["devices"][0]["model"] = raw
+    aioclient_mock.get(API_URL, json=payload)
+    account = await async_get_account(async_get_clientsession(hass), "tok")
+    assert account.devices["CS-A"].model == expected
+
+
+async def test_answer_without_a_model_is_accepted(hass, aioclient_mock):
+    """A bridge that does not send the model yet must keep working."""
+    payload = account_payload()
+    assert "model" not in payload["devices"][0]
+    aioclient_mock.get(API_URL, json=payload)
+    account = await async_get_account(async_get_clientsession(hass), "tok")
+    assert account.devices["CS-A"].model is None
+
+
 async def test_unknown_reading_is_ignored(hass, aioclient_mock):
     aioclient_mock.get(
         API_URL, json=account_payload(readings={"co2": 600, "voc_index": 104})

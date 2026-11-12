@@ -46,6 +46,7 @@ class Device:
     name: str
     room: str | None
     firmware: str | None
+    model: str | None
     online: bool
     last_seen: datetime | None
     readings: dict[str, float]
@@ -100,6 +101,7 @@ def _parse_device(raw: Any) -> Device:
         name=_optional_str(raw.get("name")) or device_id,
         room=_optional_str(raw.get("room")),
         firmware=_optional_str(raw.get("firmware")),
+        model=_optional_str(raw.get("model")),
         online=online,
         last_seen=_parse_last_seen(raw.get("last_seen")) if online else None,
         readings=_parse_readings(raw.get("readings")) if online else {},

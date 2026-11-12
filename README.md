@@ -47,6 +47,7 @@ A sensor appears the first time a device reports that reading.
 - Readings are fetched every 60 seconds.
 - A reading older than 3 minutes is left out by the cloud, so its sensor shows as unavailable. A device that is offline shows all of its sensors as unavailable. Home Assistant never shows zero or an old value in their place.
 - Devices you add or remove in the Clairsense app appear or disappear on the next update, without reloading the integration.
+- Each device shows its name, room, model and firmware version from your Clairsense account. A new name or firmware version follows on the next update; a name or area you set in Home Assistant stays as you set it.
 - One Home Assistant install can be linked to a Clairsense account at a time. Linking a second install replaces the first, which then asks you to sign in again.
 - On first-generation units, the CO₂ and VOC figures are estimates calculated from the gas sensor, not direct measurements.
 

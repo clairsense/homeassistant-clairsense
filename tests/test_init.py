@@ -268,6 +268,57 @@ async def test_rename_and_new_firmware_update_the_registry(
     assert device.manufacturer == MANUFACTURER
 
 
+async def test_model_is_shown_on_a_new_device(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    payload = account_payload()
+    payload["devices"][0]["model"] = "CLS-V1M1"
+    entry = await setup_integration(hass, aioclient_mock, payload)
+    device = _device_entry(device_registry, entry)
+    assert (device.manufacturer, device.model) == (MANUFACTURER, "CLS-V1M1")
+
+
+async def test_model_reaches_a_device_registered_without_one(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    """Devices linked before the bridge sent a model get it on the next poll."""
+    entry = await setup_integration(hass, aioclient_mock)
+    before = _device_entry(device_registry, entry)
+    assert before.model is None
+    device_registry.async_update_device(before.id, name_by_user="My monitor", area_id=None)
+
+    payload = account_payload()
+    payload["devices"][0]["model"] = "CLS-V1M1"
+    await _refresh(hass, aioclient_mock, entry, payload)
+    device = _device_entry(device_registry, entry)
+    assert (device.model, device.name, device.sw_version) == ("CLS-V1M1", "Living room", "1.0.3")
+    # What the user set stays theirs.
+    assert (device.name_by_user, device.area_id) == ("My monitor", None)
+
+    payload["devices"][0]["model"] = "CLS-V2M1"
+    await _refresh(hass, aioclient_mock, entry, payload)
+    assert _device_entry(device_registry, entry).model == "CLS-V2M1"
+
+
+async def test_unchanged_device_is_not_rewritten(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    device_registry: dr.DeviceRegistry,
+) -> None:
+    payload = account_payload()
+    payload["devices"][0]["model"] = "CLS-V1M1"
+    entry = await setup_integration(hass, aioclient_mock, payload)
+    with patch.object(
+        device_registry, "async_update_device", wraps=device_registry.async_update_device
+    ) as update:
+        await _refresh(hass, aioclient_mock, entry, payload)
+    assert update.call_count == 0
+
+
 async def test_remove_entry_revokes(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
