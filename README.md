@@ -11,20 +11,32 @@ This is a community integration, not an official Home Assistant product.
 ## Requirements
 
 - Home Assistant 2025.4 or newer
-- [HACS](https://hacs.xyz)
 - A Clairsense account with at least one device
+- A GitHub account. Home Assistant asks for it when you add this repository by its link.
+- On Home Assistant 2026.10 and older: [HACS](https://hacs.xyz). Newer versions have the Marketplace built in.
 - Home Assistant's default `my` integration enabled (it is on by default). Signing in uses it to return you to Home Assistant.
 
 ## Install
 
-1. In Home Assistant, open HACS and choose the three-dot menu, then **Custom repositories**.
+### Home Assistant 2026.11 and newer
+
+1. Go to **Settings > Marketplace**. The first time, read the notice, tick **I understand the risks and agree** and continue.
+2. Choose **Add from link**, paste `https://github.com/clairsense/homeassistant-clairsense` and choose **Add**.
+3. If Home Assistant asks you to connect GitHub, open the page it names and enter the code it shows.
+4. Open **Clairsense** in the Marketplace, choose **Install** and confirm.
+
+No restart is needed. Home Assistant starts the Clairsense set-up right after the install.
+
+### Home Assistant 2025.4 to 2026.10
+
+1. Open HACS and choose the three-dot menu, then **Custom repositories**.
 2. Add `https://github.com/clairsense/homeassistant-clairsense` with the type **Integration**.
 3. Find **Clairsense** in HACS, download it, and restart Home Assistant.
 
 ## Set up
 
-1. Go to **Settings > Devices & services > Add integration** and choose **Clairsense**.
-2. Sign in with your Clairsense account in the page that opens, and approve the access request.
+1. If the set-up did not start by itself, go to **Settings > Devices & services > Add integration** and choose **Clairsense**.
+2. Choose **Open website**, sign in with your Clairsense account in the page that opens, and approve the access request.
 3. Your devices appear in Home Assistant, each with the sensors it reports.
 
 ## Sensors
@@ -60,7 +72,7 @@ Home Assistant asks you to sign in to Clairsense again when:
 
 ## Removal
 
-Remove the integration under **Settings > Devices & services > Clairsense > Delete**. This also unlinks your account on the Clairsense side. You can then remove the repository in HACS.
+Remove the integration under **Settings > Devices & services > Clairsense > Delete**. This also unlinks your account on the Clairsense side. You can then uninstall it: open **Clairsense** in the Marketplace and choose **Uninstall** in the three-dot menu, or remove the repository in HACS on older versions.
 
 ## Development
 
