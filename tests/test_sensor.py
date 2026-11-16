@@ -277,3 +277,27 @@ def _png_size(path: Path) -> tuple[int, int]:
 def test_dark_logo_matches_the_logo() -> None:
     brand = Path(__file__).parent.parent / "custom_components" / "clairsense" / "brand"
     assert _png_size(brand / "dark_logo.png") == _png_size(brand / "logo.png")
+
+
+def test_unit_names_are_not_deprecated(caplog):
+    """Home Assistant removes the old concentration constants in 2027.8."""
+    import importlib
+
+    from custom_components.clairsense import const, sensor
+
+    caplog.clear()
+    importlib.reload(const)
+    importlib.reload(sensor)
+    assert "deprecated" not in caplog.text.lower()
+
+
+def test_units_are_valid_for_their_device_class():
+    """The unit strings differ between Home Assistant versions (µ against μ)."""
+    from homeassistant.components.sensor import DEVICE_CLASS_UNITS
+
+    from custom_components.clairsense.sensor import SENSORS
+
+    for description in SENSORS:
+        allowed = DEVICE_CLASS_UNITS.get(description.device_class)
+        if allowed is not None:
+            assert description.native_unit_of_measurement in allowed, description.key

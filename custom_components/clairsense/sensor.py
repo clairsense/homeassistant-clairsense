@@ -8,19 +8,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    CONCENTRATION_PARTS_PER_MILLION,
-    PERCENTAGE,
-    UnitOfPressure,
-    UnitOfTemperature,
-)
+from homeassistant.const import PERCENTAGE, UnitOfPressure, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, UNIT_MICROGRAMS_PER_CUBIC_METER, UNIT_PARTS_PER_MILLION
 from .coordinator import ClairsenseConfigEntry, ClairsenseCoordinator
 
 PARALLEL_UPDATES = 0
@@ -59,13 +53,13 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     _description(
         "co2",
         device_class=SensorDeviceClass.CO2,
-        unit=CONCENTRATION_PARTS_PER_MILLION,
+        unit=UNIT_PARTS_PER_MILLION,
         precision=0,
     ),
     _description(
         "pm25",
         device_class=SensorDeviceClass.PM25,
-        unit=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        unit=UNIT_MICROGRAMS_PER_CUBIC_METER,
         precision=1,
     ),
     _description(
@@ -80,7 +74,7 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     _description(
         "voc",
         device_class=SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS_PARTS,
-        unit=CONCENTRATION_PARTS_PER_MILLION,
+        unit=UNIT_PARTS_PER_MILLION,
         precision=2,
     ),
     _description(
