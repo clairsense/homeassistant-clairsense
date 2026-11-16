@@ -400,3 +400,19 @@ def dt_now_plus(delta):
     from homeassistant.util import dt as dt_util
 
     return dt_util.utcnow() + delta
+
+
+def test_store_names_clairsense_as_the_maker():
+    """The Marketplace's "Made by" line is the manifest's code owner."""
+    import json
+    from pathlib import Path
+
+    manifest = json.loads(
+        (
+            Path(__file__).parent.parent
+            / "custom_components"
+            / "clairsense"
+            / "manifest.json"
+        ).read_text()
+    )
+    assert manifest["codeowners"] == ["@clairsense"]
